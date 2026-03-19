@@ -59,8 +59,8 @@ export class Input {
 
             if(binding == ControlBinding.LEFT && gamepadLX < 0) factor += -gamepadLX;
             if(binding == ControlBinding.RIGHT && gamepadLX > 0) factor += gamepadLX;
-            if(binding == ControlBinding.FORWARD && gamepadLY > 0) factor += -gamepadLY;
-            if(binding == ControlBinding.BACKWARD && gamepadLY < 0) factor += gamepadLY;
+            if(binding == ControlBinding.FORWARD && gamepadLY < 0) factor += -gamepadLY;
+            if(binding == ControlBinding.BACKWARD && gamepadLY > 0) factor += gamepadLY;
 
             if(binding == ControlBinding.ROTATE_CW && gamepadRX > 0) factor += gamepadRX;
             if(binding == ControlBinding.ROTATE_CCW && gamepadRX < 0) factor += -gamepadRX;
