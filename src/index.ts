@@ -26,6 +26,16 @@ async function main() {
     await setup();
 
     window.addEventListener("resize", () => resize());
+    window.addEventListener("gamepadconnected", event => {
+        console.log(`%cGamepad ${event.gamepad.index} connected`, "color: cornflowerblue; font-family: system-ui; font-size: 2rem; text-stroke: 0.25rem black; font-weight:bold;")
+        console.log(event.gamepad.id)
+        input.attachController(event.gamepad);
+    });
+    window.addEventListener("gamepaddisconnected", event => {
+        console.log(`%cGamepad ${event.gamepad.index} disconnected`, "color: pink; font-family: system-ui; font-size: 2rem; text-stroke: 0.25rem black; font-weight:bold;")
+        console.log(event.gamepad.id)
+        input.detachController(event.gamepad);
+    });
     requestAnimationFrame(render);
 }
 
@@ -34,6 +44,7 @@ function resize() {
     renderer.setPixelRatio(devicePixelRatio);
 
     camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
 }
 
 
@@ -63,6 +74,7 @@ function update(time: Time) {
     }
 
     player.update(time);
+    input.update(time);
 
     camera.position.copy(player.position);
     camera.rotation.order = "YXZ";
