@@ -5,6 +5,7 @@ import { Time } from "./time";
 import { MeshBasicNodeMaterial } from "three/webgpu";
 import { texture, uv, vec2 } from "three/tsl";
 import { loadedModels, loadedTextures } from "./assets";
+import { iuv } from "./shaders";
 
 export interface PlayerAnimationState extends AnimationState {
     headRotation: Euler;
@@ -57,9 +58,9 @@ export class PlayerAnimator extends Animator<PlayerAnimationState> {
         console.log(this.playerBody.material);
 
         this.playerBody.material = new MeshBasicNodeMaterial({
-            colorNode: texture(playerTexture, vec2(uv().x, uv().y.oneMinus())),
+            colorNode: texture(playerTexture, iuv()),
             side: DoubleSide,
-            transparent: true
+            alphaTest: 0.5
         })
         
         const mixer = new AnimationMixer(this.playerRoot);
