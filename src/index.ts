@@ -1,12 +1,13 @@
-import { BufferGeometry, Float32BufferAttribute, LinearToneMapping, NoToneMapping, RepeatWrapping, Scene } from "three";
+import { BufferGeometry, Float32BufferAttribute, InstancedMesh, LinearToneMapping, Material, Matrix4, NoToneMapping, Object3D, RepeatWrapping, Scene, Vector2 } from "three";
 import { GLTF } from "three/examples/jsm/Addons.js";
-import { texture } from "three/tsl";
+import { mod, texture } from "three/tsl";
 import { Mesh, MeshBasicNodeMaterial, PerspectiveCamera, WebGPURenderer } from "three/webgpu";
-import { loadAssets, loadedTextures } from "./assets";
+import { loadAssets, loadedModels, loadedTextures } from "./assets";
 import { Input } from "./input";
 import { Player } from "./player";
 import "./style.css";
 import { Time } from "./time";
+import { iuv } from "./shaders";
 
 
 const renderer = new WebGPURenderer;
@@ -25,7 +26,6 @@ async function main() {
 
     document.body.appendChild(renderer.domElement);
     input.attachKeyboard(document.body);
-    resize();
 
     await loadAssets();
     await setup();
@@ -42,6 +42,10 @@ async function main() {
         input.detachController(event.gamepad);
     });
     requestAnimationFrame(render);
+
+    requestAnimationFrame(() => {
+        resize();
+    });
 }
 
 function resize() {
@@ -92,103 +96,94 @@ function update(time: Time) {
     // camera.lookAt(player.position);
 }
 
-function makeCube(width: number, height: number, depth: number): BufferGeometry {
-    const geometry = new BufferGeometry();
-    const xl = 0, yl = 0, zl = 0, xu = width, yu = height, zu = depth;
-    const w = width, h = height, d = depth;
+function findThree<ObjectType extends Object3D>(object: Object3D, name: string) {
+    let found: ObjectType;
 
-    geometry.setAttribute("position", new Float32BufferAttribute([
-        xu, yl, zl,
-        xl, yl, zl,
-        xl, yu, zl,
-        xu, yu, zl,
+    object.traverse(predicate => {
+        if(found != null) return;
 
-        xl, yl, zu,
-        xu, yl, zu,
-        xu, yu, zu,
-        xl, yu, zu,
+        if(predicate.name == name) {
+            found = <ObjectType>predicate;
+        }
+    });
 
-        xl, yl, zl,
-        xl, yl, zu,
-        xl, yu, zu,
-        xl, yu, zl,
+    return found;
+}
 
-        xu, yl, zu,
-        xu, yl, zl,
-        xu, yu, zl,
-        xu, yu, zu,
+export const islandMeshTemplates: InstancedMesh[] = new Array;
+const islandInstanceCounts: number[] = new Array;
+const islandMatrices: WeakMap<Matrix4, [ InstancedMesh, number ]> = new WeakMap;
 
-        xl, yu, zu,
-        xu, yu, zu,
-        xu, yu, zl,
-        xl, yu, zl,
+function createIsland(islandType: number) {
+    const instancer = islandMeshTemplates[islandType];
+    const index = islandInstanceCounts[islandType]++;
 
-        xl, yl, zl,
-        xu, yl, zl,
-        xu, yl, zu,
-        xl, yl, zu
-    ], 3, false));
-    geometry.setAttribute("uv", new Float32BufferAttribute([
-        0, 0,
-        w, 0,
-        w, h,
-        0, h,
+    const matrix = new Matrix4;
+    matrix.makeScale(2, 2, 2);
+    instancer.setMatrixAt(index, matrix);
+    islandMatrices.set(matrix, [ instancer, index ]);
 
-        0, 0,
-        w, 0,
-        w, h,
-        0, h,
+    return matrix;
+}
+function updateIsland(matrix: Matrix4) {
+    const entry = islandMatrices.get(matrix);
 
-        0, 0,
-        d, 0,
-        d, h,
-        0, h,
+    if(entry == null) return;
 
-        0, 0,
-        d, 0,
-        d, h,
-        0, h,
+    const [ instancedMesh, index ] = entry;
+    instancedMesh.setMatrixAt(index, matrix);
+}
 
-        0, 0,
-        w, 0,
-        w, d,
-        0, d,
-
-        0, 0,
-        w, 0,
-        w, d,
-        0, d
-    ], 2, false));
-
-    let index: number[] = new Array;
-
-    for(let i = 0; i < 6; i++) {
-        index.push(
-            i * 4 + 0, i * 4 + 1, i * 4 + 2,
-            i * 4 + 2, i * 4 + 3, i * 4 + 0
-        );
+export function hexagonalToCartesian(inVec: Vector2, outVec: Vector2): Vector2 {
+    if(inVec.y % 2 < 1) {
+        outVec.copy(inVec);
+        outVec.multiplyScalar(2);
+    } else {
+        outVec.set(inVec.x * 2 + 1, inVec.y * 2);
     }
-    geometry.setIndex(index);
 
-    return geometry;
+    outVec.y *= Math.sqrt(3) / 2;
+
+    return outVec;
 }
 
 async function setup() {
+    for(let i = 1; i <= 1; i++) {
+        const islandTexture = loadedTextures.get("island" + i).clone();
+        const model = loadedModels.get("island");
+        const mesh = findThree<Mesh>(model.scene, "Island1").clone(true);
+
+        const instancedMesh = new InstancedMesh(
+            mesh.geometry,
+            new MeshBasicNodeMaterial({
+                colorNode: texture(islandTexture, iuv()),
+                alphaTest: 0.5
+            }),
+            4096
+        );
+
+        islandMeshTemplates.push(instancedMesh);
+        islandInstanceCounts.push(0);
+        scene.add(instancedMesh);
+    }
+
     const grassTexture = loadedTextures.get("grass").clone();
     grassTexture.wrapS = RepeatWrapping;
     grassTexture.wrapT = RepeatWrapping;
 
-    const geometry = makeCube(8, 1, 8);
+    const hexPos = new Vector2();
+    const cartPos = new Vector2();
 
-    const ground = new Mesh(
-        geometry,
-        new MeshBasicNodeMaterial({
-            colorNode: texture(grassTexture)
-        })
-    );
+    for(hexPos.x = 0; hexPos.x < 64; hexPos.x++) {
+        for(hexPos.y = 0; hexPos.y < 64; hexPos.y++) {
+            hexagonalToCartesian(hexPos, cartPos);
 
-    scene.add(ground);
-    ground.position.set(-4, -1, -4);
+            const island = createIsland(0);
+
+            island.setPosition(cartPos.x, Math.random() * 16, cartPos.y);
+            updateIsland(island);
+        }
+    }
     
     player = new Player(input);
     player.position.set(0, 0, 0);

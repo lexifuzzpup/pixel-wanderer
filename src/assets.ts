@@ -10,6 +10,7 @@ export async function loadAssets() {
     const gltfLoader = new GLTFLoader(manager);
 
     loadedTextures.set("grass", await textureLoader.loadAsync("assets/textures/grass.png"));
+    loadedTextures.set("island1", await textureLoader.loadAsync("assets/textures/island1.png"));
     loadedTextures.set("player", await textureLoader.loadAsync("assets/textures/player.png"));
 
     for(const texture of loadedTextures.values()) {
@@ -19,4 +20,5 @@ export async function loadAssets() {
     }
 
     loadedModels.set("player", await gltfLoader.loadAsync("assets/models/player.glb"));
+    loadedModels.set("island", await gltfLoader.loadAsync("assets/models/island.glb"));
 }
