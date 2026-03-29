@@ -39,6 +39,10 @@ export class PlayerAnimator extends Animator<PlayerAnimationState> {
         scene.add(this.playerRoot);
     }
 
+    public setVisible(visible: boolean) {
+        this.playerRoot.visible = visible;
+    }
+
     public override setup() {
         const gltf = loadedModels.get("player");
         super.setup(gltf);

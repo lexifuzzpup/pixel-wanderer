@@ -12,6 +12,7 @@ export class Player {
     public readonly velocity = new Vector3;
     public readonly rotation = new Vector2;
     public readonly cameraRotation = new Vector2;
+    public readonly lastCameraRotation = new Vector2;
     public readonly animator = new PlayerAnimator;
     public readonly animationState = this.animator.state;
     public readonly camera = new PerspectiveCamera;
@@ -96,6 +97,18 @@ export class Player {
 
         if(this.position.y < -100) this.reset();
 
+        if(this.input.wasPressed(ControlBinding.CHANGE_PERSPECTIVE)) {
+            if(this.firstPerson) {
+                this.firstPerson = false;
+
+                this.cameraRotation.copy(this.lastCameraRotation);
+            } else {
+                this.firstPerson = true;
+
+                this.lastCameraRotation.copy(this.cameraRotation);
+            }
+        }
+
         // Read control inputs
         let dx = 0, dz = 0, jump = false;
         let deltaYaw = 0, deltaPitch = 0;
@@ -178,6 +191,7 @@ export class Player {
         this.animationState.position.copy(this.position);
         this.animationState.rotation.set(0, this.rotation.x, 0);
         this.animationState.headRotation.set(this.rotation.y, this.rotation.x, 0, "YXZ");
+        this.animator.setVisible(!this.firstPerson);
         this.animator.update(time);
     }
 }
