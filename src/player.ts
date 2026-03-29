@@ -118,11 +118,11 @@ export class Player {
         dz += this.input.getAnalog(ControlBinding.BACKWARD);
         dz -= this.input.getAnalog(ControlBinding.FORWARD);
 
-        deltaYaw -= this.input.getAnalog(ControlBinding.ROTATE_CW);
-        deltaYaw += this.input.getAnalog(ControlBinding.ROTATE_CCW);
+        deltaYaw -= this.input.getAnalog(ControlBinding.ROTATE_CW, false);
+        deltaYaw += this.input.getAnalog(ControlBinding.ROTATE_CCW, false);
 
-        deltaPitch += this.input.getAnalog(ControlBinding.ROTATE_UP);
-        deltaPitch -= this.input.getAnalog(ControlBinding.ROTATE_DOWN);
+        deltaPitch += this.input.getAnalog(ControlBinding.ROTATE_UP, false);
+        deltaPitch -= this.input.getAnalog(ControlBinding.ROTATE_DOWN, false);
 
         jump = this.input.isPressed(ControlBinding.JUMP);
 

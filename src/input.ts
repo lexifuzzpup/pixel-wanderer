@@ -1,6 +1,7 @@
 import { AXES, BUTTONS, GamepadWrapper } from "gamepad-wrapper";
 import { Keyboard } from "./keyboard";
 import { Time } from "./time";
+import { Mouse, MouseButton } from "./mouse";
 
 export enum ControlBinding {
     RIGHT, LEFT, FORWARD, BACKWARD,
@@ -13,9 +14,10 @@ export enum ControlBinding {
 
 export class Input {
     public keyboard: Keyboard;
+    public mouse: Mouse;
     public readonly gamepads: Map<Gamepad, GamepadWrapper> = new Map;
 
-    public readonly keyBindings: Record<ControlBinding, string> = {
+    public readonly keyBindings: Partial<Record<ControlBinding, string>> = {
         [ControlBinding.RIGHT]: "d",
         [ControlBinding.LEFT]: "a",
         [ControlBinding.FORWARD]: "w",
@@ -29,20 +31,17 @@ export class Input {
         [ControlBinding.JUMP]: "space",
         [ControlBinding.CHANGE_PERSPECTIVE]: "g",
     };
-    public readonly controllerBindings: Record<ControlBinding, string> = {
-        [ControlBinding.RIGHT]: null,
-        [ControlBinding.LEFT]: null,
-        [ControlBinding.FORWARD]: null,
-        [ControlBinding.BACKWARD]: null,
-
-        [ControlBinding.ROTATE_CW]: null,
-        [ControlBinding.ROTATE_CCW]: null,
-        [ControlBinding.ROTATE_UP]: null,
-        [ControlBinding.ROTATE_DOWN]: null,
-
+    public readonly controllerBindings: Partial<Record<ControlBinding, string>> = {
         [ControlBinding.JUMP]: BUTTONS.STANDARD.RC_BOTTOM,
         [ControlBinding.CHANGE_PERSPECTIVE]: BUTTONS.STANDARD.LC_TOP,
     };
+    public readonly mouseBindings: Partial<Record<ControlBinding, MouseButton>> = {
+
+    };
+
+    public readonly settings = {
+        mouseSensitivity: 0.2
+    }
 
     public attachKeyboard(body: HTMLElement) {
         this.keyboard = new Keyboard;
@@ -54,6 +53,10 @@ export class Input {
     }
     public detachController(controller: Gamepad) {
         this.gamepads.delete(controller);
+    }
+    public attachMouse(body: HTMLElement) {
+        this.mouse = new Mouse;
+        this.mouse.addListeners(body);
     }
 
     public isPressed(binding: ControlBinding): boolean {
@@ -70,10 +73,20 @@ export class Input {
         }
         return false;
     }
-    public getAnalog(binding: ControlBinding): number {
+    public getAnalog(binding: ControlBinding, clamp: boolean = true): number {
         let factor = 0;
         if(this.keyboard != null) {
             if(this.keyboard.isPressed(this.keyBindings[binding])) factor++;
+        }
+        if(this.mouse != null) {
+            const { dx, dy } = this.mouse;
+
+            if(this.mouse.isLocked()) {
+                if(binding == ControlBinding.ROTATE_CW && dx > 0) factor += dx * this.settings.mouseSensitivity;
+                if(binding == ControlBinding.ROTATE_CCW && dx < 0) factor += -dx * this.settings.mouseSensitivity;
+                if(binding == ControlBinding.ROTATE_UP && dy < 0) factor += -dy * this.settings.mouseSensitivity;
+                if(binding == ControlBinding.ROTATE_DOWN && dy > 0) factor += dy * this.settings.mouseSensitivity;
+            }
         }
 
         for(const gamepad of this.gamepads.values()) {
@@ -102,14 +115,21 @@ export class Input {
             }
         }
 
-        if(factor > 1) return 1;
-        if(factor < 0) return 0;
+        if(clamp) {
+            if(factor > 1) return 1;
+            if(factor < 0) return 0;
+        }
 
         return factor;
     }
 
     public update(time: Time) {
-        this.keyboard.update();
+        if(this.keyboard != null) {
+            this.keyboard.update();
+        }
+        if(this.mouse != null) {
+            this.mouse.update();
+        }
         for(const gamepad of this.gamepads.values()) {
             gamepad.update();
         }

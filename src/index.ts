@@ -26,6 +26,7 @@ async function main() {
 
     document.body.appendChild(renderer.domElement);
     input.attachKeyboard(document.body);
+    input.attachMouse(renderer.domElement);
 
     await loadAssets();
     await setup();
@@ -40,6 +41,12 @@ async function main() {
         console.log(`%cGamepad ${event.gamepad.index} disconnected`, "color: pink; font-family: system-ui; font-size: 2rem; text-stroke: 0.25rem black; font-weight:bold;")
         console.log(event.gamepad.id)
         input.detachController(event.gamepad);
+    });
+    document.addEventListener("mousedown", () => {
+        input.mouse.lock(renderer.domElement);
+    })
+    document.addEventListener("pointerlockchange", (event) => {
+        input.mouse.pointerLockChange(document.pointerLockElement == renderer.domElement);
     });
     requestAnimationFrame(render);
 
