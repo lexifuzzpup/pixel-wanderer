@@ -1,4 +1,4 @@
-import { AXES, GamepadWrapper } from "gamepad-wrapper";
+import { AXES, BUTTONS, GamepadWrapper } from "gamepad-wrapper";
 import { Keyboard } from "./keyboard";
 import { Time } from "./time";
 
@@ -6,7 +6,9 @@ export enum ControlBinding {
     RIGHT, LEFT, FORWARD, BACKWARD,
 
     ROTATE_CW, ROTATE_CCW,
-    ROTATE_UP, ROTATE_DOWN
+    ROTATE_UP, ROTATE_DOWN,
+
+    JUMP
 }
 
 export class Input {
@@ -22,7 +24,8 @@ export class Input {
         [ControlBinding.ROTATE_CW]: "e",
         [ControlBinding.ROTATE_CCW]: "q",
         [ControlBinding.ROTATE_UP]: "r",
-        [ControlBinding.ROTATE_DOWN]: "f"
+        [ControlBinding.ROTATE_DOWN]: "f",
+        [ControlBinding.JUMP]: "space"
     }
 
     public attachKeyboard(body: HTMLElement) {
@@ -66,6 +69,8 @@ export class Input {
             if(binding == ControlBinding.ROTATE_CCW && gamepadRX < 0) factor += -gamepadRX;
             if(binding == ControlBinding.ROTATE_UP && gamepadRY < 0) factor += -gamepadRY;
             if(binding == ControlBinding.ROTATE_DOWN && gamepadRY > 0) factor += gamepadRY;
+
+            if(binding == ControlBinding.JUMP) factor += gamepad.getButtonValue(BUTTONS.STANDARD.RC_BOTTOM);
         }
 
         if(factor > 1) return 1;

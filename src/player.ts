@@ -1,8 +1,11 @@
-import { Euler, Matrix4, PerspectiveCamera, Quaternion, Vector2, Vector3 } from "three";
-import { islandMeshTemplates } from ".";
+import { Euler, PerspectiveCamera, Vector2, Vector3 } from "three";
 import { ControlBinding, Input } from "./input";
 import { PlayerAnimator } from "./playerAnimator";
 import { Time } from "./time";
+
+enum CollisionAxis {
+    POSITIVE, NEGATIVE, NONE
+}
 
 export class Player {
     public readonly position = new Vector3;
@@ -16,7 +19,12 @@ export class Player {
 
     public friction = new Vector3;
 
+    private collisionX: CollisionAxis = CollisionAxis.NONE;
+    private collisionY: CollisionAxis = CollisionAxis.NONE;
+    private collisionZ: CollisionAxis = CollisionAxis.NONE;
     private walkTime = 0;
+    private groundTime = 0;
+    private airTime = 0;
 
     public constructor(
         public readonly input: Input
@@ -28,6 +36,24 @@ export class Player {
         this.stepX(this.velocity.x * dt);
         this.stepZ(this.velocity.z * dt);
         this.stepY(this.velocity.y * dt);
+
+        if(this.collisionX != CollisionAxis.NONE) {
+            this.velocity.x = 0;
+        }
+        if(this.collisionY != CollisionAxis.NONE) {
+            this.velocity.y = 0;
+        }
+        if(this.collisionZ != CollisionAxis.NONE) {
+            this.velocity.z = 0;
+        }
+
+        if(this.collisionY == CollisionAxis.NEGATIVE) {
+            this.groundTime += time.dt;
+            this.airTime = 0;
+        } else {
+            this.groundTime = 0;
+            this.airTime += time.dt;
+        }
 
         this.velocity.y -= 8 * time.dt;
 
@@ -41,13 +67,21 @@ export class Player {
     }
 
     private stepX(dx: number) {
-        this.position.x += dx;        
+        this.position.x += dx;       
+        this.collisionX = CollisionAxis.NONE; 
     }
     private stepY(dy: number) {
         this.position.y += dy;
+        this.collisionY = CollisionAxis.NONE;
+
+        if(this.position.y < 0) {
+            this.position.y = 0;
+            this.collisionY = CollisionAxis.NEGATIVE;
+        }
     }
     private stepZ(dz: number) {
         this.position.z += dz;
+        this.collisionZ = CollisionAxis.NONE;
     }
 
     public reset() {
@@ -63,7 +97,7 @@ export class Player {
         if(this.position.y < -100) this.reset();
 
         // Read control inputs
-        let dx = 0, dz = 0;
+        let dx = 0, dz = 0, jump = false;
         let deltaYaw = 0, deltaPitch = 0;
 
         dx += this.input.getAnalog(ControlBinding.RIGHT);
@@ -76,6 +110,8 @@ export class Player {
 
         deltaPitch += this.input.getAnalog(ControlBinding.ROTATE_UP);
         deltaPitch -= this.input.getAnalog(ControlBinding.ROTATE_DOWN);
+
+        jump = this.input.isPressed(ControlBinding.JUMP);
 
         let deltaLength = Math.sqrt(dx * dx + dz * dz);
         if(deltaLength > 1) {
@@ -115,6 +151,12 @@ export class Player {
         }
 
         const cameraRotation = new Euler(this.cameraRotation.y, this.cameraRotation.x, 0, "YXZ");
+
+        if(jump && this.airTime < 0.1) {
+            console.log("jump");
+            this.velocity.y = 10;
+            this.airTime = 0.1;
+        }
 
         if(this.firstPerson) {
             this.position.x += Math.sin(this.rotation.x) * dz + Math.cos(this.rotation.x) * dx;
