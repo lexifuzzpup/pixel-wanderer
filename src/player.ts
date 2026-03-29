@@ -16,7 +16,7 @@ export class Player {
     public readonly animator = new PlayerAnimator;
     public readonly animationState = this.animator.state;
     public readonly camera = new PerspectiveCamera;
-    public firstPerson = false;
+    public firstPerson = true;
 
     public friction = new Vector3;
 
@@ -145,8 +145,8 @@ export class Player {
         // Modify control inputs for deltatime
         dx *= dt * 4;
         dz *= dt * 4;
-        deltaYaw *= dt;
-        deltaPitch *= dt;
+        deltaYaw *= dt * 2;
+        deltaPitch *= dt * 2;
 
         if(this.firstPerson) {
             this.rotation.x += deltaYaw;
