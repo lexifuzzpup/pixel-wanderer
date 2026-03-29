@@ -191,7 +191,7 @@ export class Player {
         this.animationState.position.copy(this.position);
         this.animationState.rotation.set(0, this.rotation.x, 0);
         this.animationState.headRotation.set(this.rotation.y, this.rotation.x, 0, "YXZ");
-        this.animator.setVisible(!this.firstPerson);
+        this.animator.state.firstPersonFactor = this.firstPerson ? 1 : 0;
         this.animator.update(time);
     }
 }

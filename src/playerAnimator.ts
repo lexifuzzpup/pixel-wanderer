@@ -10,6 +10,7 @@ import { iuv } from "./shaders";
 export interface PlayerAnimationState extends AnimationState {
     headRotation: Euler;
     runningFactor: number;
+    firstPersonFactor: number;
 }
 
 export class PlayerAnimator extends Animator<PlayerAnimationState> {
@@ -26,12 +27,15 @@ export class PlayerAnimator extends Animator<PlayerAnimationState> {
     private headQuaternion = new Quaternion;
     private displayHeadQuaternion = new Quaternion;
 
+    private morphTargetFirstPerson: number;
+
     public override createBlankState() {
         return {
             position: new Vector3,
             rotation: new Euler,
             headRotation: new Euler,
-            runningFactor: 0
+            runningFactor: 0,
+            firstPersonFactor: 0,
         };
     }
 
@@ -58,8 +62,9 @@ export class PlayerAnimator extends Animator<PlayerAnimationState> {
             }
         });
 
+        this.morphTargetFirstPerson = this.playerBody.morphTargetDictionary["FirstPerson"];
+
         const playerTexture = loadedTextures.get("player");
-        console.log(this.playerBody.material);
 
         this.playerBody.material = new MeshBasicNodeMaterial({
             colorNode: texture(playerTexture, iuv()),
@@ -104,7 +109,7 @@ export class PlayerAnimator extends Animator<PlayerAnimationState> {
     }
 
     public override update(time: Time) {
-        const { runningFactor, headRotation } = this.state;
+        const { runningFactor } = this.state;
 
         this.walkAnimation.setEffectiveTimeScale(this.state.runningFactor * 0.85);
         if(runningFactor != 0 && this.previousState.runningFactor == 0) {
@@ -129,6 +134,8 @@ export class PlayerAnimator extends Animator<PlayerAnimationState> {
 
         this.playerHead.quaternion.copy(this.displayBodyQuaternion).invert();
         this.playerHead.applyQuaternion(this.displayHeadQuaternion);
+
+        this.playerBody.morphTargetInfluences[this.morphTargetFirstPerson] = this.state.firstPersonFactor;
 
         this.mixer.update(time.dt);
 
