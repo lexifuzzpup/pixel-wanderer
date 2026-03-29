@@ -1,10 +1,12 @@
-import { Euler, PerspectiveCamera, Vector2, Vector3 } from "three";
+import { Euler, Matrix4, PerspectiveCamera, Quaternion, Vector2, Vector3 } from "three";
+import { islandMeshTemplates } from ".";
 import { ControlBinding, Input } from "./input";
 import { PlayerAnimator } from "./playerAnimator";
 import { Time } from "./time";
 
 export class Player {
     public readonly position = new Vector3;
+    public readonly velocity = new Vector3;
     public readonly rotation = new Vector2;
     public readonly cameraRotation = new Vector2;
     public readonly animator = new PlayerAnimator;
@@ -12,14 +14,53 @@ export class Player {
     public readonly camera = new PerspectiveCamera;
     public firstPerson = false;
 
+    public friction = new Vector3;
+
     private walkTime = 0;
 
     public constructor(
         public readonly input: Input
     ) {}
 
+    private updatePhysics(time: Time) {
+        const { dt } = time;
+
+        this.stepX(this.velocity.x * dt);
+        this.stepZ(this.velocity.z * dt);
+        this.stepY(this.velocity.y * dt);
+
+        this.velocity.y -= 8 * time.dt;
+
+        this.velocity.x = this.velocity.x * (1 - 0.5 ** (dt * 1000));
+        this.velocity.y = this.velocity.y * (1 - 0.5 ** (dt * 1000));
+        this.velocity.z = this.velocity.z * (1 - 0.5 ** (dt * 1000));
+
+        this.velocity.x -= Math.min(Math.abs(this.velocity.x), 8) * Math.sign(this.velocity.x) * this.friction.x;
+        this.velocity.y -= Math.min(Math.abs(this.velocity.y), 8) * Math.sign(this.velocity.y) * this.friction.y;
+        this.velocity.z -= Math.min(Math.abs(this.velocity.z), 8) * Math.sign(this.velocity.z) * this.friction.z;
+    }
+
+    private stepX(dx: number) {
+        this.position.x += dx;        
+    }
+    private stepY(dy: number) {
+        this.position.y += dy;
+    }
+    private stepZ(dz: number) {
+        this.position.z += dz;
+    }
+
+    public reset() {
+        this.position.set(0, 0, 0);
+        this.velocity.set(0, 0, 0);
+    }
+
     public update(time: Time) {
         const { dt } = time;
+
+        this.updatePhysics(time);
+
+        if(this.position.y < -100) this.reset();
 
         // Read control inputs
         let dx = 0, dz = 0;
@@ -80,12 +121,14 @@ export class Player {
             this.position.z += Math.cos(this.rotation.x) * dz - Math.sin(this.rotation.x) * dx;
             this.camera.position.copy(this.position);
             this.camera.position.y += 1.75;
+            this.camera.fov = 90;
         } else {
             this.position.x += Math.sin(this.cameraRotation.x) * dz + Math.cos(this.cameraRotation.x) * dx;
             this.position.z += Math.cos(this.cameraRotation.x) * dz - Math.sin(this.cameraRotation.x) * dx;
             this.camera.position.copy(this.position);
-            this.camera.position.add(new Vector3(0, 0, 5).applyEuler(cameraRotation));
+            this.camera.position.add(new Vector3(0, 0, 12).applyEuler(cameraRotation));
             this.camera.position.y += 1.75;
+            this.camera.fov = 70;
         }
 
         this.camera.rotation.set(this.cameraRotation.y, this.cameraRotation.x, 0, "YXZ");
