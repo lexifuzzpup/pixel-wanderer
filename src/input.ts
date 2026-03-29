@@ -4,18 +4,18 @@ import { Time } from "./time";
 
 export enum ControlBinding {
     RIGHT, LEFT, FORWARD, BACKWARD,
+    JUMP,
 
     ROTATE_CW, ROTATE_CCW,
     ROTATE_UP, ROTATE_DOWN,
-
-    JUMP
+    CHANGE_PERSPECTIVE
 }
 
 export class Input {
     public keyboard: Keyboard;
     public readonly gamepads: Map<Gamepad, GamepadWrapper> = new Map;
 
-    public readonly keyBindings = {
+    public readonly keyBindings: Record<ControlBinding, string> = {
         [ControlBinding.RIGHT]: "d",
         [ControlBinding.LEFT]: "a",
         [ControlBinding.FORWARD]: "w",
@@ -25,8 +25,24 @@ export class Input {
         [ControlBinding.ROTATE_CCW]: "q",
         [ControlBinding.ROTATE_UP]: "r",
         [ControlBinding.ROTATE_DOWN]: "f",
-        [ControlBinding.JUMP]: "space"
-    }
+
+        [ControlBinding.JUMP]: "space",
+        [ControlBinding.CHANGE_PERSPECTIVE]: "g",
+    };
+    public readonly controllerBindings: Record<ControlBinding, string> = {
+        [ControlBinding.RIGHT]: null,
+        [ControlBinding.LEFT]: null,
+        [ControlBinding.FORWARD]: null,
+        [ControlBinding.BACKWARD]: null,
+
+        [ControlBinding.ROTATE_CW]: null,
+        [ControlBinding.ROTATE_CCW]: null,
+        [ControlBinding.ROTATE_UP]: null,
+        [ControlBinding.ROTATE_DOWN]: null,
+
+        [ControlBinding.JUMP]: BUTTONS.STANDARD.RC_BOTTOM,
+        [ControlBinding.CHANGE_PERSPECTIVE]: BUTTONS.STANDARD.LC_TOP,
+    };
 
     public attachKeyboard(body: HTMLElement) {
         this.keyboard = new Keyboard;
@@ -42,6 +58,17 @@ export class Input {
 
     public isPressed(binding: ControlBinding): boolean {
         return this.getAnalog(binding) > 0.5;
+    }
+    public wasPressed(binding: ControlBinding): boolean {
+        if(this.keyboard != null) {
+            if(this.keyboard.wasPressed(this.keyBindings[binding])) return true;
+        }
+        for(const gamepad of this.gamepads.values()) {
+            if(binding in this.controllerBindings) {
+                if(gamepad.getButtonDown(this.controllerBindings[binding])) return true;
+            }
+        }
+        return false;
     }
     public getAnalog(binding: ControlBinding): number {
         let factor = 0;
@@ -70,7 +97,9 @@ export class Input {
             if(binding == ControlBinding.ROTATE_UP && gamepadRY < 0) factor += -gamepadRY;
             if(binding == ControlBinding.ROTATE_DOWN && gamepadRY > 0) factor += gamepadRY;
 
-            if(binding == ControlBinding.JUMP) factor += gamepad.getButtonValue(BUTTONS.STANDARD.RC_BOTTOM);
+            if(binding in this.controllerBindings) {
+                factor += gamepad.getButtonValue(this.controllerBindings[binding]);
+            }
         }
 
         if(factor > 1) return 1;
